@@ -25,18 +25,18 @@ export const DataManagement: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">データ管理</h3>
+    <div className="bg-latte-50 rounded-xl p-4 shadow-soft border border-latte-200">
+      <h3 className="text-lg font-semibold text-latte-900 mb-4">データ管理</h3>
       
       {/* 保存状態の表示 */}
       <div className="flex items-center gap-2 mb-4 text-sm">
         {hasUnsavedChanges ? (
-          <div className="flex items-center gap-2 text-yellow-600">
+          <div className="flex items-center gap-2 text-functional-warning">
             <AlertCircle className="w-4 h-4" />
             <span>未保存の変更があります</span>
           </div>
         ) : lastSaved ? (
-          <div className="flex items-center gap-2 text-green-600">
+          <div className="flex items-center gap-2 text-sage-600">
             <Save className="w-4 h-4" />
             <span>最終保存: {lastSaved.toLocaleTimeString()}</span>
           </div>
@@ -49,7 +49,7 @@ export const DataManagement: React.FC = () => {
         {hasUnsavedChanges && (
           <button
             onClick={() => saveData()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-sage-500 text-white rounded-lg hover:bg-sage-600 transition-colors shadow-soft"
           >
             <Save className="w-4 h-4" />
             今すぐ保存
@@ -59,14 +59,14 @@ export const DataManagement: React.FC = () => {
         {/* エクスポート */}
         <button
           onClick={exportData}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-latte-500 text-white rounded-lg hover:bg-latte-600 transition-colors shadow-soft"
         >
           <Download className="w-4 h-4" />
           データをバックアップ
         </button>
 
         {/* インポート */}
-        <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+        <label className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-functional-info text-white rounded-lg hover:bg-opacity-90 transition-colors cursor-pointer shadow-soft">
           <Upload className="w-4 h-4" />
           データを復元
           <input
@@ -80,15 +80,15 @@ export const DataManagement: React.FC = () => {
         {/* データクリア */}
         <button
           onClick={clearData}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-functional-danger bg-opacity-10 text-functional-danger rounded-lg hover:bg-opacity-20 transition-colors"
         >
           すべてのデータを削除
         </button>
       </div>
 
       {/* 説明テキスト */}
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-xs text-blue-800">
+      <div className="mt-4 p-3 bg-sage-50 rounded-lg border border-sage-200">
+        <p className="text-xs text-sage-800">
           💡 データは自動的にブラウザに保存されます。
           定期的にバックアップを取ることをお勧めします。
         </p>
