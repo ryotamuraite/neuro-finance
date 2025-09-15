@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
+import { IncomeAllocation } from '../components/IncomeSettings';
+
 // LocalStorageのキー
 const STORAGE_KEY = 'neurofinance_data';
 const BACKUP_KEY = 'neurofinance_backup';
@@ -13,6 +15,7 @@ export interface NeuroFinanceData {
   settings: {
     userName?: string;
     monthlyIncome?: number;
+    incomeAllocation?: IncomeAllocation;
     categories: BudgetCategory[];
   };
   transactions: Transaction[];
@@ -61,6 +64,13 @@ const DEFAULT_DATA: NeuroFinanceData = {
   version: CURRENT_VERSION,
   lastUpdated: new Date().toISOString(),
   settings: {
+    monthlyIncome: 0,
+    incomeAllocation: {
+      savings: 20,
+      fixedCosts: 40,
+      livingCosts: 25,
+      freeMoney: 15
+    },
     categories: [
       { id: '1', name: '食費', icon: 'coffee', budget: 50000, spent: 0, color: '#8884d8' },
       { id: '2', name: '娯楽費', icon: 'gamepad', budget: 30000, spent: 0, color: '#82ca9d' },
@@ -95,7 +105,8 @@ export const useLocalStorage = () => {
         // バージョンチェック
         if (parsed.version !== CURRENT_VERSION) {
           // マイグレーション処理をここに追加
-          console.log('データマイグレーションが必要です');
+          // TODO: データマイグレーション処理
+        // console.log('データマイグレーションが必要です');
         }
         
         setData(parsed);
@@ -108,7 +119,7 @@ export const useLocalStorage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // LocalStorageにデータを保存
   const saveData = useCallback((newData?: NeuroFinanceData) => {
@@ -144,7 +155,7 @@ export const useLocalStorage = () => {
       
       return false;
     }
-  }, [data]);
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 自動バックアップからの復元
   const tryRestoreFromBackup = useCallback(() => {
@@ -153,7 +164,8 @@ export const useLocalStorage = () => {
       if (backup) {
         const parsed = JSON.parse(backup) as NeuroFinanceData;
         setData(parsed);
-        console.log('バックアップから復元しました');
+        // バックアップから復元成功
+        // console.log('バックアップから復元しました');
         return true;
       }
     } catch (error) {
@@ -214,6 +226,37 @@ export const useLocalStorage = () => {
     }
   }, [exportData]);
 
+  // 収入設定更新
+  const updateIncomeSettings = useCallback((income: number, allocation: IncomeAllocation) => {
+    const updatedData = {
+      ...data,
+      settings: {
+        ...data.settings,
+        monthlyIncome: income,
+        incomeAllocation: allocation
+      }
+    };
+    
+    setData(updatedData);
+    setHasUnsavedChanges(true);
+    saveData(updatedData);
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // カテゴリ更新
+  const updateCategories = useCallback((newCategories: BudgetCategory[]) => {
+    const updatedData = {
+      ...data,
+      settings: {
+        ...data.settings,
+        categories: newCategories
+      }
+    };
+    
+    setData(updatedData);
+    setHasUnsavedChanges(true);
+    saveData(updatedData);
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
+  
   // トランザクション追加
   const addTransaction = useCallback((transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
@@ -241,7 +284,7 @@ export const useLocalStorage = () => {
     addXP(10);
     
     return newTransaction;
-  }, [data]);
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // XP追加とレベルアップ処理
   const addXP = useCallback((amount: number) => {
@@ -260,7 +303,8 @@ export const useLocalStorage = () => {
       }));
       
       // レベルアップ通知（実装は後で）
-      console.log(`🎉 レベル${newLevel}にアップ！`);
+      // TODO: トースト通知などのUIフィードバックを実装
+      // console.log(`🎉 レベル${newLevel}にアップ！`);
     } else {
       setData(prev => ({
         ...prev,
@@ -314,6 +358,12 @@ export const useLocalStorage = () => {
     
     // トランザクション
     addTransaction,
+    
+    // カテゴリ管理
+    updateCategories,
+    
+    // 収入設定
+    updateIncomeSettings,
     
     // ゲーミフィケーション
     addXP,

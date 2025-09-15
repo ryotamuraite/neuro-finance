@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Other
+docs/_handOver/*
+docs/_privateDoc/*
+.history/*
