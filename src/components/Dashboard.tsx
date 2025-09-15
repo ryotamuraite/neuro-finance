@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { DataManagement } from './DataManagement';
 import { 
@@ -9,7 +9,7 @@ import {
   Target,
   AlertCircle,
   Sparkles,
-  PiggyBank,
+
   Heart,
   Coffee,
   ShoppingBag,
@@ -21,15 +21,12 @@ import {
   Area, 
   BarChart, 
   Bar, 
-  PieChart, 
-  Pie, 
   Cell, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Legend 
 } from 'recharts';
 
 // ダミーデータ
@@ -113,8 +110,7 @@ const BudgetCard: React.FC<{
 };
 
 const Dashboard: React.FC = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState('今月');
-  const { data, isLoading, addTransaction, addXP } = useLocalStorage();
+  const { data, isLoading } = useLocalStorage();
   
   // ローディング中の表示
   if (isLoading) {
@@ -133,7 +129,6 @@ const Dashboard: React.FC = () => {
   // 今月の統計
   const currentMonth = monthlyData[monthlyData.length - 1];
   const totalSavings = monthlyData.reduce((sum, month) => sum + month.貯蓄, 0);
-  const avgMonthlySpending = monthlyData.reduce((sum, month) => sum + month.支出, 0) / monthlyData.length;
   
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">

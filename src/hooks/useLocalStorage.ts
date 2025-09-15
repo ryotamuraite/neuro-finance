@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 // LocalStorageのキー
 const STORAGE_KEY = 'neurofinance_data';
 const BACKUP_KEY = 'neurofinance_backup';
-const VERSION_KEY = 'neurofinance_version';
+// const VERSION_KEY = 'neurofinance_version'; // 将来的に使用予定
 const CURRENT_VERSION = '1.0.0';
 
 // データの型定義

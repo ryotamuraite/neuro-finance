@@ -28,7 +28,7 @@ jobs:
           cache: 'npm'
           
       - name: Install dependencies
-        run: npm ci
+        run: npm install  # npm ci だとpackage-lock.jsonが必要
         
       - name: Build
         run: npm run build
