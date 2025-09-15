@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { DataManagement } from './DataManagement';
 import { 
   Wallet, 
   TrendingUp, 
@@ -109,6 +111,21 @@ const BudgetCard: React.FC<{
 
 const Dashboard: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('今月');
+  const { data, isLoading, addTransaction, addXP } = useLocalStorage();
+  
+  // ローディング中の表示
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">データを読み込んでいます...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // 今月の統計
   const currentMonth = monthlyData[monthlyData.length - 1];
@@ -239,16 +256,25 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* アラートエリア */}
-      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-1">今週のインサイト</h3>
-            <p className="text-gray-700 text-sm">
-              ストレス時の支出が先週より30%増加しています。リラックスタイムを設けて、衝動買いを防ぎましょう。
-            </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* アラートエリア */}
+        <div className="lg:col-span-2">
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-200">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">今週のインサイト</h3>
+                <p className="text-gray-700 text-sm">
+                  ストレス時の支出が先週より30%増加しています。リラックスタイムを設けて、衝動買いを防ぎましょう。
+                </p>
+              </div>
+            </div>
           </div>
+        </div>
+        
+        {/* データ管理パネル */}
+        <div className="lg:col-span-1">
+          <DataManagement />
         </div>
       </div>
     </div>
