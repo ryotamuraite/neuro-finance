@@ -24,5 +24,6 @@ dist-ssr
 *.sw?
 
 # Other
-docs/*
-.history/*
+.history*
+docs/_handOver*
+docs/_privateDoc*
