@@ -190,9 +190,6 @@ const Dashboard: React.FC = () => {
     };
   }, [data.settings.monthlyIncome, data.settings.incomeAllocation, currentMonthStats.totalSpent]);
   
-  // 今月の統計（ダミーデータ）
-  const totalSavings = monthlyData.reduce((sum, month) => sum + month.貯蓄, 0);
-  
   // ローディング中の表示
   if (isLoading) {
     return (
@@ -213,19 +210,12 @@ const Dashboard: React.FC = () => {
       <header className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsIncomeModalOpen(true)}
-              className="px-4 py-2 bg-latte-50 rounded-lg shadow-soft border border-latte-200 hover:shadow-soft-md transition-all flex items-center gap-2"
-            >
-              <Wallet className="w-5 h-5" />
-              <span className="hidden sm:inline">収入設定</span>
-            </button>
             <div className="p-3 bg-gradient-to-br from-latte-400 to-latte-600 rounded-xl text-white shadow-soft-md">
               <Wallet className="w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-latte-900">NeuroFinance</h1>
-              <p className="text-latte-600">あなたの金銭管理をサポート</p>
+              <h1 className="text-2xl font-bold text-latte-900">NeuroFinance</h1>
+              <p className="text-sm text-latte-600">あなたの金銭管理をサポート</p>
             </div>
           </div>
           
@@ -291,12 +281,21 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* 収入配分（仮想封筒） */}
-      {incomeEnvelopes.total > 0 && (
+      {incomeEnvelopes.total > 0 ? (
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-latte-900 mb-4 flex items-center gap-2">
-            <Wallet className="w-6 h-6 text-latte-600" />
-            収入の配分
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-latte-900 flex items-center gap-2">
+              <Wallet className="w-6 h-6 text-latte-600" />
+              収入の配分
+            </h2>
+            <button
+              onClick={() => setIsIncomeModalOpen(true)}
+              className="px-3 py-1.5 text-sm bg-latte-50 border border-latte-300 rounded-lg hover:bg-latte-100 transition-all flex items-center gap-1.5"
+            >
+              <Settings className="w-4 h-4" />
+              <span>収入設定</span>
+            </button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-sage-50 rounded-xl p-4 border border-sage-200">
               <div className="flex items-center gap-2 mb-2">
@@ -333,6 +332,29 @@ const Dashboard: React.FC = () => {
               <div className="text-2xl font-bold text-functional-warning">
                 ¥{incomeEnvelopes.freeMoney.toLocaleString()}
               </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* 収入未設定の場合のガイド */
+        <div className="mb-8 p-6 bg-gradient-to-br from-latte-100 to-sage-50 rounded-xl border border-latte-300">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-white rounded-lg shadow-soft">
+              <Wallet className="w-6 h-6 text-latte-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-latte-900 mb-2">収入設定で、より正確な管理を</h3>
+              <p className="text-sm text-latte-700 mb-3">
+                月収を設定すると、自動的に貯蓄・固定費・生活費・自由支出に振り分けられ、
+                使える金額が明確になります。
+              </p>
+              <button
+                onClick={() => setIsIncomeModalOpen(true)}
+                className="px-4 py-2 bg-sage-500 text-white rounded-lg hover:bg-sage-600 transition-all flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                <span>収入を設定する</span>
+              </button>
             </div>
           </div>
         </div>

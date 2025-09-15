@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Wallet,
-  TrendingUp,
   PiggyBank,
   Home,
   ShoppingBag,
   Gamepad2,
-  AlertCircle,
   Info
 } from 'lucide-react';
 
@@ -85,7 +83,7 @@ export const IncomeSettings: React.FC<IncomeSettingsProps> = ({
         freeMoney: Math.round(allocation.freeMoney * ratio)
       });
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAllocationChange = (key: keyof IncomeAllocation, value: number) => {
     const newValue = Math.max(0, Math.min(100, value));
