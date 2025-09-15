@@ -1,46 +1,48 @@
-# Getting Started with Create React App
+# NeuroFinance
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+神経多様性（ADHD、ASD、双極性障害、不眠症）を持つ人々のための革新的な金銭管理ツール
 
-## Available Scripts
+## 🌟 特徴
 
-In the project directory, you can run:
+- 📊 **視覚的ダッシュボード** - 抽象的な数字を直感的に理解できるビジュアル表現
+- 💰 **仮想予算封筒システム** - カテゴリー別の予算管理と視覚的な残高表示
+- 🌳 **お金の木** - 貯蓄の成長を視覚化（開発中）
+- 😊 **気分追跡と支出相関分析** - 精神状態と金銭行動の関係性を可視化
+- 🎮 **ゲーミフィケーション** - レベルアップとクエストで継続的なモチベーション維持
 
-### `npm start`
+## 🚀 Quick Start
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+```bash
+# 依存関係のインストール
+npm install
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+# 開発サーバーの起動
+npm run dev
 
-### `npm test`
+# ビルド
+npm run build
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# プレビュー
+npm run preview
+```
 
-### `npm run build`
+## 📱 デプロイ
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+GitHub Pagesへの自動デプロイが設定済み。`main`ブランチへのpushで自動的にデプロイされます。
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🛠 技術スタック
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **Frontend**: React 18 + TypeScript
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Build Tool**: Vite
+- **Deployment**: GitHub Pages
 
-### `npm run eject`
+## 📝 ライセンス
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+MIT
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 🤝 貢献
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+プルリクエストは歓迎です。大きな変更の場合は、まずissueを開いて変更内容について議論してください。
