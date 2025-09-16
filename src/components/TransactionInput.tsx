@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Plus, 
@@ -24,6 +24,7 @@ interface TransactionInputProps {
     budget: number;
     spent: number;
   }>;
+  initialData?: Transaction;
 }
 
 // 気分の選択肢
@@ -56,7 +57,8 @@ export const TransactionInput: React.FC<TransactionInputProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  categories
+  categories,
+  initialData
 }) => {
   const [amount, setAmount] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0]?.id || '');
@@ -64,6 +66,27 @@ export const TransactionInput: React.FC<TransactionInputProps> = ({
   const [selectedMood, setSelectedMood] = useState<string>('stable');
   const [impulsivity, setImpulsivity] = useState<number>(3);
   const [showWarning, setShowWarning] = useState<boolean>(false);
+  const [transactionDate, setTransactionDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+  // 編集モードの場合、初期値を設定
+  useEffect(() => {
+    if (initialData && isOpen) {
+      setAmount(initialData.amount.toString());
+      setSelectedCategory(initialData.category);
+      setDescription(initialData.description || '');
+      setSelectedMood(initialData.mood || 'stable');
+      setImpulsivity(initialData.impulsivity || 3);
+      setTransactionDate(initialData.date.split('T')[0]);
+    } else if (!initialData && isOpen) {
+      // 新規作成時はリセット
+      setAmount('');
+      setSelectedCategory(categories[0]?.id || '');
+      setDescription('');
+      setSelectedMood('stable');
+      setImpulsivity(3);
+      setTransactionDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [initialData, categories, isOpen]);
 
   // 衝動度が高い場合の警告
   React.useEffect(() => {
@@ -82,7 +105,7 @@ export const TransactionInput: React.FC<TransactionInputProps> = ({
     }
 
     const transaction: Omit<Transaction, 'id'> = {
-      date: new Date().toISOString(),
+      date: new Date(transactionDate).toISOString(),
       amount: parseInt(amount),
       category: selectedCategory,
       description,
@@ -121,7 +144,9 @@ export const TransactionInput: React.FC<TransactionInputProps> = ({
               <div className="p-2 bg-gradient-to-br from-latte-400 to-latte-600 rounded-lg text-white">
                 <TrendingDown className="w-5 h-5" />
               </div>
-              <h2 className="text-xl font-bold text-latte-900">支出を記録</h2>
+              <h2 className="text-xl font-bold text-latte-900">
+                {initialData ? '支出を編集' : '支出を記録'}
+              </h2>
             </div>
             <button
               onClick={handleCancel}
@@ -153,6 +178,20 @@ export const TransactionInput: React.FC<TransactionInputProps> = ({
                 autoFocus
               />
             </div>
+          </div>
+
+          {/* 日付入力 */}
+          <div>
+            <label className="block text-sm font-medium text-latte-700 mb-2">
+              日付
+            </label>
+            <input
+              type="date"
+              value={transactionDate}
+              onChange={(e) => setTransactionDate(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-latte-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-sage-400 transition-all"
+              max={new Date().toISOString().split('T')[0]}
+            />
           </div>
 
           {/* カテゴリ選択 */}
@@ -293,7 +332,7 @@ export const TransactionInput: React.FC<TransactionInputProps> = ({
               className="flex-1 px-4 py-3 bg-gradient-to-r from-sage-400 to-sage-500 text-white rounded-lg font-medium hover:shadow-soft-md transition-all flex items-center justify-center gap-2"
             >
               <Plus className="w-5 h-5" />
-              記録する
+              {initialData ? '更新する' : '記録する'}
             </button>
           </div>
 

@@ -25,5 +25,9 @@ dist-ssr
 
 # Other
 .history*
-docs/_handOver*
-docs/_privateDoc*
+
+# Private documents
+docs/_privateDoc/
+
+# Handover documents  
+docs/_handOver/

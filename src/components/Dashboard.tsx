@@ -1,14 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocalStorage, Transaction, Income } from '../hooks/useLocalStorage';
 import { DataManagement } from './DataManagement';
 import { TransactionInput } from './TransactionInput';
 import { CategoryManager } from './CategoryManager';
 import { IncomeSettings } from './IncomeSettings';
+import { TransactionHistory } from './TransactionHistory';
+import { MonthlyReport } from './MonthlyReport';
+import { IncomeInput } from './IncomeInput';
+import { IncomeHistory } from './IncomeHistory';
 import { 
   Wallet, 
   TrendingUp, 
   TrendingDown, 
-  Calendar, 
   Target,
   AlertCircle,
   Sparkles,
@@ -110,10 +113,41 @@ const BudgetCard: React.FC<BudgetCardProps> = ({ category }) => {
 };
 
 const Dashboard: React.FC = () => {
-  const { data, isLoading, addTransaction, updateCategories, updateIncomeSettings } = useLocalStorage();
+  const { data, isLoading, addTransaction, editTransaction, deleteTransaction, updateCategories, updateIncomeSettings, addIncome, editIncome, deleteIncome, checkAndAddRecurringIncomes } = useLocalStorage();
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isIncomeInputModalOpen, setIsIncomeInputModalOpen] = useState(false);
+  const [isIncomeHistoryModalOpen, setIsIncomeHistoryModalOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  const [recurringIncomeNotification, setRecurringIncomeNotification] = useState<{
+    show: boolean;
+    count: number;
+    totalAmount: number;
+  }>({ show: false, count: 0, totalAmount: 0 });
+  
+  // 定期収入の自動記録チェック
+  useEffect(() => {
+    if (!isLoading) {
+      const addedIncomes = checkAndAddRecurringIncomes();
+      if (addedIncomes.length > 0) {
+        const totalAmount = addedIncomes.reduce((sum, income) => sum + income.amount, 0);
+        setRecurringIncomeNotification({
+          show: true,
+          count: addedIncomes.length,
+          totalAmount
+        });
+        
+        // 5秒後に通知を自動で閉じる
+        setTimeout(() => {
+          setRecurringIncomeNotification({ show: false, count: 0, totalAmount: 0 });
+        }, 5000);
+      }
+    }
+  }, [isLoading, checkAndAddRecurringIncomes]);
   
   // 実データから統計を計算（Hooksは条件文の前に配置）
   const currentMonthStats = useMemo(() => {
@@ -130,6 +164,16 @@ const Dashboard: React.FC = () => {
     
     // 今月の支出合計
     const totalSpent = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+    
+    // 今月の収入をフィルタ
+    const monthIncomes = (data.incomes || []).filter(i => {
+      const incomeDate = new Date(i.date);
+      return incomeDate.getMonth() === currentMonth && 
+             incomeDate.getFullYear() === currentYear;
+    });
+    
+    // 今月の収入合計
+    const totalIncome = monthIncomes.reduce((sum, i) => sum + i.amount, 0);
     
     // カテゴリ別の実データ
     const categoriesWithSpent = data.settings.categories.map(cat => {
@@ -162,13 +206,35 @@ const Dashboard: React.FC = () => {
       { mood: '😟 不安', amount: moodSpending['anxious'] || 0, color: '#9b8b9b' },
     ];
     
+    // 収入カテゴリ別の集計
+    const incomeCategoryData = [
+      { value: 'salary', label: '給与', icon: '💼', color: '#10b981' },
+      { value: 'bonus', label: 'ボーナス', icon: '🎁', color: '#f59e0b' },
+      { value: 'freelance', label: '副業', icon: '💻', color: '#8b5cf6' },
+      { value: 'gift', label: '贈与', icon: '🎀', color: '#ec4899' },
+      { value: 'investment', label: '投資収益', icon: '📈', color: '#3b82f6' },
+      { value: 'other', label: 'その他', icon: '📝', color: '#6b7280' },
+    ].map(cat => {
+      const categoryIncomes = monthIncomes.filter(i => i.category === cat.value);
+      const amount = categoryIncomes.reduce((sum, i) => sum + i.amount, 0);
+      return {
+        ...cat,
+        amount,
+        count: categoryIncomes.length
+      };
+    }).filter(cat => cat.amount > 0);
+    
     return {
       totalSpent,
+      totalIncome,
       categoriesWithSpent,
+      incomeCategoryData,
       moodData: moodDataCalculated,
-      transactionCount: monthTransactions.length
+      transactionCount: monthTransactions.length,
+      incomeCount: monthIncomes.length,
+      actualBalance: totalIncome - totalSpent // 実際の収支バランス
     };
-  }, [data.transactions, data.settings.categories]);
+  }, [data.transactions, data.settings.categories, data.incomes]);
   
   // 収入配分の計算
   const incomeEnvelopes = useMemo(() => {
@@ -206,6 +272,33 @@ const Dashboard: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
+      {/* 定期収入自動記録の通知 */}
+      {recurringIncomeNotification.show && (
+        <div className="mb-4 p-4 bg-gradient-to-r from-sage-50 to-sage-100 border border-sage-300 rounded-xl shadow-soft animate-slide-down">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-sage-500 rounded-lg text-white">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-sage-900">
+                  定期収入を自動記録しました！
+                </p>
+                <p className="text-sm text-sage-700">
+                  {recurringIncomeNotification.count}件の収入（合計 ¥{recurringIncomeNotification.totalAmount.toLocaleString()}）を記録しました
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setRecurringIncomeNotification({ show: false, count: 0, totalAmount: 0 })}
+              className="text-sage-600 hover:text-sage-800 transition-colors"
+            >
+              <span className="text-xl">×</span>
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* ヘッダー */}
       <header className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -221,22 +314,78 @@ const Dashboard: React.FC = () => {
           
           <div className="flex items-center gap-3">
             <button 
+              onClick={() => setIsIncomeInputModalOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-sage-400 to-sage-500 text-white rounded-lg shadow-soft hover:shadow-soft-md transition-all flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline">収入を記録</span>
+            </button>
+            <button 
               onClick={() => setIsTransactionModalOpen(true)}
               className="px-4 py-2 bg-gradient-to-r from-functional-warning to-latte-600 text-white rounded-lg shadow-soft hover:shadow-soft-md transition-all flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
               <span className="hidden sm:inline">支出を記録</span>
             </button>
-            <button className="px-4 py-2 bg-latte-50 rounded-lg shadow-soft border border-latte-200 hover:shadow-soft-md transition-all text-latte-700">
-              <Calendar className="w-5 h-5" />
+            <button 
+              onClick={() => setIsIncomeHistoryModalOpen(true)}
+              className="px-4 py-2 bg-latte-50 rounded-lg shadow-soft border border-latte-200 hover:shadow-soft-md transition-all text-latte-700"
+              title="収入履歴"
+            >
+              <TrendingUp className="w-5 h-5" />
             </button>
-            <button className="px-4 py-2 bg-gradient-to-r from-sage-400 to-sage-500 text-white rounded-lg shadow-soft hover:shadow-soft-md transition-all flex items-center gap-2">
+            <button 
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="px-4 py-2 bg-latte-50 rounded-lg shadow-soft border border-latte-200 hover:shadow-soft-md transition-all text-latte-700"
+              title="支出履歴"
+            >
+              <TrendingDown className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setIsReportModalOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-sage-400 to-sage-500 text-white rounded-lg shadow-soft hover:shadow-soft-md transition-all flex items-center gap-2"
+              title="月次レポート"
+            >
               <Sparkles className="w-5 h-5" />
-              <span>レベル {data.level || 5}</span>
+              <span>レポート</span>
             </button>
           </div>
         </div>
       </header>
+
+      {/* Aboutエリア */}
+      <div className="mb-8 p-6 bg-gradient-to-br from-latte-100 to-sage-50 rounded-xl border border-latte-300 shadow-soft">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-latte-800 leading-relaxed">
+              NeuroFinanceは、ADHD・ASD・双極性障害・不眠症などの神経多様性を持つ方々の金銭管理をサポートするツールです。
+              <br className="hidden md:inline" />
+              同じ境遇にある方々の資産管理の一助となることを願って開発しています。
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <a 
+              href="https://ofuse.me/ryotamuraite" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-6 py-3 bg-white hover:bg-latte-50 border-2 border-[#2880a1] rounded-full transition-all hover:shadow-soft-md group"
+              title="開発者を応援する"
+            >
+              <svg 
+                className="w-6 h-6 group-hover:scale-110 transition-transform fill-[#2880a1]"
+                viewBox="0 0 323.86 352.27"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M165.62,216.8c-.76.39-1.6.59-2.43.59s-1.67-.2-2.43-.59l-55.88-28.59-8.79,37.21c0,5.9,4.78,10.68,10.68,10.68h112.86c5.9,0,10.68-4.78,10.68-10.68l-8.79-37.21-55.89,28.59Z"/>
+                <path d="M315.29,186.34c-12.86-47.03-34.69-85.88-63.14-112.35-18.47-17.19-39.14-28.83-60.92-34.48,1.98-3.23,4.11-7.58,6.58-13.31,3.81-8.85,6.85-17.54,6.98-17.91,1.13-3.25-.58-6.81-3.84-7.94-3.25-1.13-6.81.58-7.94,3.84-4.67,13.4-9.77,24.61-12.75,29.34-3.22-3.43-8.53-11.09-12.87-18.77-1.11-1.96-3.18-3.17-5.43-3.17h0c-2.25,0-4.32,1.21-5.43,3.17-4.34,7.68-9.65,15.34-12.87,18.77-2.98-4.73-8.08-15.94-12.75-29.34-1.13-3.25-4.69-4.97-7.94-3.84-3.25,1.13-4.97,4.69-3.84,7.94.13.37,3.17,9.06,6.98,17.91,2.29,5.32,4.29,9.45,6.16,12.61-23.16,5.45-44.98,17.66-64.16,36.09-27.56,26.48-48.4,65.09-60.26,111.67-13.53,53.1-9.58,92.45,12.06,120.29,13.59,17.48,33.47,29.54,60.79,36.86,21.49,5.76,47.95,8.56,80.9,8.56,46.27,0,111.45-4.81,143.2-46.41,10.47-13.72,16.7-30.6,18.51-50.17,1.83-19.86-.86-43.19-8.01-69.35ZM161.96,29.92c1.41,2.18,2.73,4.09,3.97,5.76-2.23-.1-4.46-.15-6.7-.12-.39,0-.77.02-1.16.02,1.22-1.65,2.51-3.52,3.89-5.66ZM283.55,289.64c-18.7,24.49-57.45,35.9-121.95,35.9s-101.98-11.15-120.59-35.09c-16.01-20.6-18.46-53.34-7.26-97.29,5.05-19.82,11.83-37.95,20.12-53.99,6.13-8.73,28.06-36.03,58.65-29.76,32.9,6.74,34.42,57.87,34.4,67.62h-31.25c-2.15,0-4.15.64-5.83,1.74l53.35,27.29,53.35-27.29c-1.68-1.1-3.68-1.74-5.83-1.74h-33.7c-.01-9.75,1.5-60.87,34.4-67.62,23.87-4.89,42.46,10.65,52.39,21.87,10.66,17.95,19.34,38.86,25.7,62.11,11.81,43.22,9.81,75.6-5.96,96.26Z"/>
+                <circle cx="105.36" cy="151.88" r="11.68" transform="translate(-76.54 118.98) rotate(-45)"/>
+                <circle cx="217.38" cy="151.88" r="11.68" transform="translate(-43.73 198.19) rotate(-45)"/>
+              </svg>
+              <span className="font-semibold text-[#2880a1]">開発を応援する</span>
+            </a>
+          </div>
+        </div>
+      </div>
 
       {/* メインステータス */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -246,10 +395,10 @@ const Dashboard: React.FC = () => {
             <span className="text-latte-100">現在の残高</span>
             <Wallet className="w-6 h-6 text-latte-200" />
           </div>
-          <div className="text-3xl font-bold mb-2">¥{incomeEnvelopes.remaining.toLocaleString()}</div>
+          <div className="text-3xl font-bold mb-2">¥{currentMonthStats.actualBalance.toLocaleString()}</div>
           <div className="flex items-center gap-1 text-sm text-latte-100">
             <TrendingUp className="w-4 h-4" />
-            <span>月収¥{incomeEnvelopes.total.toLocaleString()}</span>
+            <span>今月の収入¥{currentMonthStats.totalIncome.toLocaleString()}</span>
           </div>
         </div>
 
@@ -262,20 +411,20 @@ const Dashboard: React.FC = () => {
           <div className="text-3xl font-bold mb-2">¥{currentMonthStats.totalSpent.toLocaleString()}</div>
           <div className="flex items-center gap-1 text-sm text-yellow-50">
             <Target className="w-4 h-4" />
-            <span>予算の {incomeEnvelopes.total > 0 ? Math.round((currentMonthStats.totalSpent / incomeEnvelopes.total) * 100) : 0}% 使用</span>
+            <span>{currentMonthStats.transactionCount}件の支出</span>
           </div>
         </div>
 
-        {/* 貯蓄目標 */}
+        {/* 今月の収入 */}
         <div className="bg-gradient-to-br from-sage-400 to-sage-600 rounded-2xl p-6 text-white shadow-soft-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sage-50">今年の貯蓄</span>
+            <span className="text-sage-50">今月の収入</span>
             <Leaf className="w-6 h-6 text-sage-100" />
           </div>
-          <div className="text-3xl font-bold mb-2">¥{incomeEnvelopes.savings.toLocaleString()}</div>
+          <div className="text-3xl font-bold mb-2">¥{currentMonthStats.totalIncome.toLocaleString()}</div>
           <div className="flex items-center gap-1 text-sm text-sage-50">
             <PiggyBank className="w-4 h-4" />
-            <span>月収の{data.settings.incomeAllocation?.savings || 20}%を自動貯蓄</span>
+            <span>{currentMonthStats.incomeCount}件の収入</span>
           </div>
         </div>
       </div>
@@ -434,6 +583,32 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* 収入カテゴリ別表示 */}
+      {currentMonthStats.incomeCategoryData.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-latte-900 flex items-center gap-2 mb-4">
+            <TrendingUp className="w-6 h-6 text-sage-600" />
+            今月の収入内訳
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {currentMonthStats.incomeCategoryData.map(cat => (
+              <div key={cat.value} className="bg-white rounded-xl p-4 shadow-soft border border-latte-200 hover:shadow-soft-md transition-all">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">{cat.icon}</span>
+                  <span className="text-sm font-medium text-latte-900">{cat.label}</span>
+                </div>
+                <p className="text-lg font-bold" style={{ color: cat.color }}>
+                  ¥{cat.amount.toLocaleString()}
+                </p>
+                <p className="text-xs text-latte-600">
+                  {cat.count}件
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* アラートエリア */}
         <div className="lg:col-span-2">
@@ -458,13 +633,21 @@ const Dashboard: React.FC = () => {
       
       {/* トランザクション入力モーダル */}
       <TransactionInput 
-        isOpen={isTransactionModalOpen}
-        onClose={() => setIsTransactionModalOpen(false)}
+        isOpen={isTransactionModalOpen || editingTransaction !== null}
+        onClose={() => {
+          setIsTransactionModalOpen(false);
+          setEditingTransaction(null);
+        }}
         onSubmit={(transaction) => {
-          addTransaction(transaction);
-          // 成功メッセージ（後で実装）
+          if (editingTransaction) {
+            editTransaction({ ...transaction, id: editingTransaction.id } as Transaction);
+          } else {
+            addTransaction(transaction);
+          }
+          setEditingTransaction(null);
         }}
         categories={data.settings.categories}
+        initialData={editingTransaction || undefined}
       />
       
       {/* カテゴリ管理モーダル */}
@@ -488,6 +671,63 @@ const Dashboard: React.FC = () => {
         }}
         onUpdate={updateIncomeSettings}
       />
+      
+      {/* トランザクション履歴モーダル */}
+      <TransactionHistory
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        transactions={data.transactions}
+        categories={data.settings.categories}
+        onEdit={(transaction) => {
+          setEditingTransaction(transaction);
+          setIsHistoryModalOpen(false);
+        }}
+        onDelete={deleteTransaction}
+      />
+      
+      {/* 月次レポートモーダル */}
+      <MonthlyReport
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        transactions={data.transactions}
+        categories={data.settings.categories}
+        monthlyIncome={data.settings.monthlyIncome}
+        incomeAllocation={data.settings.incomeAllocation}
+      />
+      
+      {/* 収入入力モーダル */}
+      {(isIncomeInputModalOpen || editingIncome !== null) && (
+        <IncomeInput
+          onClose={() => {
+            setIsIncomeInputModalOpen(false);
+            setEditingIncome(null);
+          }}
+          onSubmit={(income) => {
+            if (editingIncome) {
+              editIncome({ ...income, id: editingIncome.id } as Income);
+            } else {
+              addIncome(income);
+            }
+            setEditingIncome(null);
+            setIsIncomeInputModalOpen(false);
+          }}
+          editingIncome={editingIncome || undefined}
+        />
+      )}
+      
+      {/* 収入履歴モーダル */}
+      {isIncomeHistoryModalOpen && (
+        <IncomeHistory
+          incomes={data.incomes || []}
+          onClose={() => setIsIncomeHistoryModalOpen(false)}
+          onEdit={(income) => {
+            setEditingIncome(income);
+            setIsIncomeHistoryModalOpen(false);
+            setIsIncomeInputModalOpen(true);
+          }}
+          onDelete={deleteIncome}
+        />
+      )}
     </div>
   );
 };

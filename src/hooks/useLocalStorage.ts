@@ -19,6 +19,7 @@ export interface NeuroFinanceData {
     categories: BudgetCategory[];
   };
   transactions: Transaction[];
+  incomes: Income[]; // 収入記録を追加
   moods: MoodEntry[];
   goals: Goal[];
   level: number;
@@ -59,6 +60,16 @@ export interface Goal {
   deadline: string;
 }
 
+export interface Income {
+  id: string;
+  date: string;
+  amount: number;
+  category: 'salary' | 'bonus' | 'freelance' | 'gift' | 'investment' | 'other';
+  description: string;
+  isRecurring?: boolean; // 定期収入かどうか
+  recurringDay?: number; // 定期収入の日（1-31）
+}
+
 // デフォルトデータ
 const DEFAULT_DATA: NeuroFinanceData = {
   version: CURRENT_VERSION,
@@ -79,6 +90,7 @@ const DEFAULT_DATA: NeuroFinanceData = {
     ]
   },
   transactions: [],
+  incomes: [], // 収入記録の初期化
   moods: [],
   goals: [],
   level: 1,
@@ -107,6 +119,11 @@ export const useLocalStorage = () => {
           // マイグレーション処理をここに追加
           // TODO: データマイグレーション処理
         // console.log('データマイグレーションが必要です');
+        }
+        
+        // incomes フィールドが存在しない場合は追加（後方互換性のため）
+        if (!parsed.incomes) {
+          parsed.incomes = [];
         }
         
         setData(parsed);
@@ -163,6 +180,12 @@ export const useLocalStorage = () => {
       const backup = localStorage.getItem(BACKUP_KEY);
       if (backup) {
         const parsed = JSON.parse(backup) as NeuroFinanceData;
+        
+        // incomes フィールドが存在しない場合は追加
+        if (!parsed.incomes) {
+          parsed.incomes = [];
+        }
+        
         setData(parsed);
         // バックアップから復元成功
         // console.log('バックアップから復元しました');
@@ -199,6 +222,11 @@ export const useLocalStorage = () => {
           // データの検証
           if (!imported.version || !imported.settings) {
             throw new Error('無効なデータ形式です');
+          }
+          
+          // incomes フィールドが存在しない場合は追加
+          if (!imported.incomes) {
+            imported.incomes = [];
           }
           
           setData(imported);
@@ -279,14 +307,117 @@ export const useLocalStorage = () => {
     
     setData(updatedData);
     setHasUnsavedChanges(true);
+    saveData(updatedData);
     
     // XP獲得（記録するたびに10XP）
     addXP(10);
     
     return newTransaction;
-  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // XP追加とレベルアップ処理
+  // トランザクション編集
+  const editTransaction = useCallback((updatedTransaction: Transaction) => {
+    const oldTransaction = data.transactions.find(t => t.id === updatedTransaction.id);
+    if (!oldTransaction) return;
+
+    const updatedData = {
+      ...data,
+      transactions: data.transactions.map(t => 
+        t.id === updatedTransaction.id ? updatedTransaction : t
+      ),
+      settings: {
+        ...data.settings,
+        categories: data.settings.categories.map(cat => {
+          // 古いトランザクションの金額を減算
+          if (cat.id === oldTransaction.category) {
+            cat.spent -= oldTransaction.amount;
+          }
+          // 新しいトランザクションの金額を加算
+          if (cat.id === updatedTransaction.category) {
+            cat.spent += updatedTransaction.amount;
+          }
+          return cat;
+        })
+      }
+    };
+    
+    setData(updatedData);
+    setHasUnsavedChanges(true);
+    saveData(updatedData);
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // トランザクション削除
+  const deleteTransaction = useCallback((transactionId: string) => {
+    const transactionToDelete = data.transactions.find(t => t.id === transactionId);
+    if (!transactionToDelete) return;
+
+    const updatedData = {
+      ...data,
+      transactions: data.transactions.filter(t => t.id !== transactionId),
+      settings: {
+        ...data.settings,
+        categories: data.settings.categories.map(cat => 
+          cat.id === transactionToDelete.category 
+            ? { ...cat, spent: Math.max(0, cat.spent - transactionToDelete.amount) }
+            : cat
+        )
+      }
+    };
+    
+    setData(updatedData);
+    setHasUnsavedChanges(true);
+    saveData(updatedData);
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 収入追加
+  const addIncome = useCallback((income: Omit<Income, 'id'>) => {
+    const newIncome: Income = {
+      ...income,
+      id: Date.now().toString()
+    };
+    
+    const updatedData = {
+      ...data,
+      incomes: [...(data.incomes || []), newIncome]
+    };
+    
+    setData(updatedData);
+    setHasUnsavedChanges(true);
+    saveData(updatedData);
+    
+    // XP獲得（収入記録で5XP）
+    addXP(5);
+    
+    return newIncome;
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 収入編集
+  const editIncome = useCallback((updatedIncome: Income) => {
+    const updatedData = {
+      ...data,
+      incomes: (data.incomes || []).map(i => 
+        i.id === updatedIncome.id ? updatedIncome : i
+      )
+    };
+    
+    setData(updatedData);
+    setHasUnsavedChanges(true);
+    saveData(updatedData);
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 収入削除
+  const deleteIncome = useCallback((incomeId: string) => {
+    const updatedData = {
+      ...data,
+      incomes: (data.incomes || []).filter(i => i.id !== incomeId)
+    };
+    
+    setData(updatedData);
+    setHasUnsavedChanges(true);
+    saveData(updatedData);
+  }, [data, saveData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // XP追加とレベルアップ処理（定期収入チェックより前に移動）
   const addXP = useCallback((amount: number) => {
     const newXP = data.xp + amount;
     const xpForNextLevel = data.level * 100; // レベル×100がレベルアップに必要なXP
@@ -312,6 +443,106 @@ export const useLocalStorage = () => {
       }));
     }
   }, [data]);
+
+  // 定期収入の自動記録チェック
+  const checkAndAddRecurringIncomes = useCallback(() => {
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    
+    // 定期収入として設定されている収入を取得
+    const recurringIncomes = (data.incomes || []).filter(income => 
+      income.isRecurring && income.recurringDay
+    );
+    
+    if (recurringIncomes.length === 0) return [];
+    
+    const addedIncomes: Income[] = [];
+    
+    recurringIncomes.forEach(recurringIncome => {
+      // 今月のこの定期収入がすでに記録されているかチェック
+      const thisMonthRecorded = (data.incomes || []).some(income => {
+        if (income.id === recurringIncome.id) return false; // 元の定期収入設定はスキップ
+        
+        const incomeDate = new Date(income.date);
+        return (
+          incomeDate.getFullYear() === currentYear &&
+          incomeDate.getMonth() === currentMonth &&
+          incomeDate.getDate() === recurringIncome.recurringDay &&
+          income.category === recurringIncome.category &&
+          income.amount === recurringIncome.amount
+        );
+      });
+      
+      // 今日が定期収入の日で、まだ記録されていない場合
+      if (recurringIncome.recurringDay === currentDay && !thisMonthRecorded) {
+        const newIncome: Income = {
+          id: `recurring_${Date.now()}_${Math.random()}`,
+          date: today.toISOString().split('T')[0],
+          amount: recurringIncome.amount,
+          category: recurringIncome.category,
+          description: `${recurringIncome.description} (定期収入)`,
+          isRecurring: false // 自動生成された収入は定期フラグをオフに
+        };
+        
+        addedIncomes.push(newIncome);
+      }
+      
+      // 過去の未記録分もチェック（最大3日前まで）
+      for (let daysAgo = 1; daysAgo <= 3; daysAgo++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - daysAgo);
+        
+        if (
+          checkDate.getDate() === recurringIncome.recurringDay &&
+          checkDate.getMonth() === currentMonth &&
+          checkDate.getFullYear() === currentYear
+        ) {
+          const pastRecorded = (data.incomes || []).some(income => {
+            const incomeDate = new Date(income.date);
+            return (
+              incomeDate.getFullYear() === checkDate.getFullYear() &&
+              incomeDate.getMonth() === checkDate.getMonth() &&
+              incomeDate.getDate() === checkDate.getDate() &&
+              income.category === recurringIncome.category &&
+              income.amount === recurringIncome.amount
+            );
+          });
+          
+          if (!pastRecorded) {
+            const pastIncome: Income = {
+              id: `recurring_past_${Date.now()}_${Math.random()}`,
+              date: checkDate.toISOString().split('T')[0],
+              amount: recurringIncome.amount,
+              category: recurringIncome.category,
+              description: `${recurringIncome.description} (定期収入・自動記録)`,
+              isRecurring: false
+            };
+            
+            addedIncomes.push(pastIncome);
+          }
+        }
+      }
+    });
+    
+    // 新しい収入があれば追加
+    if (addedIncomes.length > 0) {
+      const updatedData = {
+        ...data,
+        incomes: [...(data.incomes || []), ...addedIncomes]
+      };
+      
+      setData(updatedData);
+      setHasUnsavedChanges(true);
+      saveData(updatedData);
+      
+      // XP獲得（自動記録ごとに3XP）
+      addXP(addedIncomes.length * 3);
+    }
+    
+    return addedIncomes;
+  }, [data, saveData, addXP]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 初回マウント時にデータを読み込み
   useEffect(() => {
@@ -358,6 +589,14 @@ export const useLocalStorage = () => {
     
     // トランザクション
     addTransaction,
+    editTransaction,
+    deleteTransaction,
+    
+    // 収入管理
+    addIncome,
+    editIncome,
+    deleteIncome,
+    checkAndAddRecurringIncomes,
     
     // カテゴリ管理
     updateCategories,
